@@ -6,11 +6,12 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 
 from odoo.exceptions import UserError
-from odoo.tests.common import Form
+from odoo.tests import Form, tagged
 
 from .common import TestAccountCashDiscountCommon
 
 
+@tagged("post_install", "-at_install")
 class TestAccountCashDiscountBase(TestAccountCashDiscountCommon):
     def create_simple_invoice(self, amount):
         invoice_date = date.today()
@@ -86,7 +87,7 @@ class TestAccountCashDiscountBase(TestAccountCashDiscountCommon):
         invoice._onchange_discount_delay()
         self.assertFalse(invoice.discount_due_date)
 
-        invoice.invalidate_cache()
+        invoice.invalidate_recordset()
         invoice.discount_percent = 10
         invoice._onchange_discount_delay()
         self.assertEqual(invoice.discount_due_date, today_10_days_later)
@@ -109,10 +110,13 @@ class TestAccountCashDiscountBase(TestAccountCashDiscountCommon):
         invoice.action_post()
 
     def test_onchange_payment_term(self):
+        # discount configuration on the payment term is defined by the core
+        # early payment discount (EPD) fields
         payment_term = self.payment_term
-        payment_term.discount_percent = 5
-        payment_term.discount_delay = 5
+        payment_term.early_discount = True
+        payment_term.discount_percentage = 5
+        payment_term.discount_days = 5
 
         invoice = self.create_simple_invoice(100)
-        self.assertEqual(invoice.discount_percent, payment_term.discount_percent)
-        self.assertEqual(invoice.discount_delay, payment_term.discount_delay)
+        self.assertEqual(invoice.discount_percent, payment_term.discount_percentage)
+        self.assertEqual(invoice.discount_delay, payment_term.discount_days)
